@@ -26,6 +26,9 @@ MT5_SERVER=Broker-Server
 ```
 Then execute `python main.py` to start the bot.
 
+Alternatively run `python dashboard.py` to open a simple command‑line menu
+that lets you start the bot and view the emotional journal interactively.
+
 ## Modules
 - `signals/` – market structure detection using a directional change algorithm
 - `volume/` – volumetric tools including permutation entropy
