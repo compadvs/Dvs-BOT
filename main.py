@@ -1,4 +1,5 @@
 """Entry point for the DVS Quantum Bot."""
+import os
 import time
 from typing import List, Dict
 
@@ -13,6 +14,7 @@ from volume.analysis import volume_profile, liquidity_zones, volume_entropy
 from volume.hawkes import hawkes_process, vol_signal
 from models.lstm_model import LSTMModel
 from models.dnn_classifier import DNNClassifier
+from models.indicator_score import indicator_score
 from execution.trade_logic import connect, place_order
 from execution.risk import RiskManager
 from journal.emotional_journal import EmotionalJournal
@@ -25,7 +27,14 @@ def fetch_market_data() -> List[Dict]:
 
 
 def main() -> None:
-    connected = connect()
+    path = os.environ.get("MT5_PATH")
+    login = os.environ.get("MT5_LOGIN")
+    password = os.environ.get("MT5_PASSWORD")
+    server = os.environ.get("MT5_SERVER")
+
+    login_int = int(login) if login and login.isdigit() else None
+
+    connected = connect(path, login_int, password, server)
     if not connected:
         print("Failed to connect to MT5")
         return
@@ -44,6 +53,13 @@ def main() -> None:
         entropy = volume_entropy(data)
         breakout_sig, tp, sl = detect_breakout(pd.DataFrame(data), structure)
 
+        # Aggregate indicator score
+        if data:
+            df = pd.DataFrame(data)
+            ind_score = indicator_score(df)
+        else:
+            ind_score = {"score": 0.0}
+
         # Example use of additional modules
         if data:
             close = np.array([d['close'] for d in data])
@@ -56,7 +72,10 @@ def main() -> None:
 
         # TODO: Build feature vector for ML models
         decision = dnn.score([])  # type: ignore
-        print(f"Decision: {decision} Breakout: {breakout_sig} TP={tp} SL={sl}")
+        print(
+            f"Decision: {decision} Breakout: {breakout_sig} TP={tp} SL={sl} "
+            f"IndicatorScore={ind_score['score']}"
+        )
 
         # Example position sizing calculation
         lot = risk.position_size(balance, sl_pips=100, tick_value=1.0)
